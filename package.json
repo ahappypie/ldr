@@ -1,0 +1,14 @@
+{
+  "name": "ldr",
+  "version": "0.0.1",
+  "description": "Lightweight program to load tweets into a database",
+  "main": "ldr.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Brian Bagdasarian",
+  "license": "ISC",
+  "dependencies": {
+    "twitter": "^1.7.0"
+  }
+}
