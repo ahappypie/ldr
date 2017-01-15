@@ -8,12 +8,24 @@ module.exports = {
     },
     track: (req, res) => {
         if(req.body.keyword) {
-            twitter.addKeyword(req.body.keyword);
+            twitter.addKeyword(req.body.keyword, (error) => {
+                if(!error) {
+                    console.log('ADDED KEYWORD: ' + req.body.keyword);
+                    if(!req.body.user) {
+                        twitter.reset();
+                        res.redirect('/');
+                    }
+                }
+            });
         }
         if(req.body.user) {
-            twitter.addUser(req.body.user);
+            twitter.addUser(req.body.user, (error) => {
+                if(!error) {
+                    console.log('ADDED USER: ' + req.body.user);
+                    twitter.reset();
+                    res.redirect('/');
+                }
+            });
         }
-        twitter.reset();
-        res.redirect('/');
     }
 };

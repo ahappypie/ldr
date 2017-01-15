@@ -23,19 +23,18 @@ class TwitterStream {
         return this.keywords.join();
     }
 
-    usersToList() {
+    usersToString() {
         return this.users.join();
     }
 
-    addKeyword(keyword) {
+    addKeyword(keyword, callback) {
         console.log('TRYING TO ADD: ' + keyword);
         if(this.keywords.indexOf(keyword) >= 0) {
-            return false;
+            callback(true);
         }
         else {
             this.keywords.push(keyword);
-            console.log('ADDED KEYWORD: ' + keyword);
-            return true;
+            callback(false);
         }
     }
 
@@ -49,21 +48,20 @@ class TwitterStream {
         }
     }
 
-    addUser(username) {
+    addUser(username, callback) {
         console.log('TRYING TO ADD: ' + username);
         this.client.get('users/show', {screen_name: username}, (error, user) => {
            if(!error) {
                if(this.users.indexOf(user.id_str) >= 0) {
-                   return false;
+                   callback(true);
                }
                else {
                    this.users.push(user.id_str);
-                   console.log('ADDED USER: ' + user.id_str);
-                   return true;
+                   callback(false);
                }
            }
            else {
-               return false;
+               callback(true);
            }
         });
     }
@@ -96,35 +94,35 @@ class TwitterStream {
     }
 
     init() {
-        clearTimeout(this.timer);
+        clearInterval(this.timer);
         if(this.stream == null || !this.active) {
-            console.log('INIT with keywords: ' + this.keywordsToString() + ' and users: ' + this.usersToList());
-            this.client.stream('statuses/filter', {track: this.keywordsToString(), follow: this.usersToList()}, (str) => {
-                clearTimeout(this.timer);
-                this.stream = str;
+            console.log('INIT with keywords: ' + this.keywordsToString() + ' and users: ' + this.usersToString());
+            this.client.stream('statuses/filter', {track: this.keywordsToString(), follow: this.usersToString()}, (str) => {
                 this.active = true;
+                clearInterval(this.timer);
+                this.stream = str;
 
                 this.stream.on('data', this.processStream);
 
                 this.stream.on('end', () => {
                     this.active = false;
-                    console.log('RE INITIALIZE');
-                    this.init();
-                    /*clearTimeout(this.timer);
-                    this.timer = setTimeout(() => {
-                        clearTimeout(this.timer);
+                    clearInterval(this.timer);
+                    this.timer = setInterval(() => {
+                        console.log('STREAM IS ACTIVE: ' + this.active);
                         if(this.active) {
+                            clearInterval(this.timer);
                             this.stream.destroy();
                         }
                         else {
                             console.log('RE INITIALIZE');
                             this.init();
                         }
-                    }, 1000 * this.calm * this.calm);*/
+                    }, 5000 * this.calm * this.calm);
                 });
 
                 this.stream.on('error', (error) => {
                     if (error.message == 'Status Code: 420') {
+                        console.log('INCREASING CALM');
                         this.calm++;
                     }
                 });
@@ -134,11 +132,15 @@ class TwitterStream {
 
     reset() {
         console.log('BEGINNING RESET');
-        this.calm = 1;
-        clearTimeout(this.timer);
+        clearInterval(this.timer);
         if (this.stream !== null && this.active) {
             console.log('DESTROYING STREAM');
             this.stream.destroy();
+            /*this.active = false;
+            setTimeout(() => {
+                console.log('REINITIALIZING');
+                this.init();
+            }, 1000);*/
         } else {
             console.log('RESET INIT');
             this.init();
