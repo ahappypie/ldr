@@ -13,7 +13,10 @@ class TwitterStream {
         });
         this.keywords = [];
         this.users = [];
-        this.isStreaming = false;
+        this.stream = null;
+        this.active = false;
+        this.timer = null;
+        this.calm = 1;
     }
 
     keywordsToString() {
@@ -25,11 +28,13 @@ class TwitterStream {
     }
 
     addKeyword(keyword) {
+        console.log('TRYING TO ADD: ' + keyword);
         if(this.keywords.indexOf(keyword) >= 0) {
             return false;
         }
         else {
             this.keywords.push(keyword);
+            console.log('ADDED KEYWORD: ' + keyword);
             return true;
         }
     }
@@ -45,6 +50,7 @@ class TwitterStream {
     }
 
     addUser(username) {
+        console.log('TRYING TO ADD: ' + username);
         this.client.get('users/show', {screen_name: username}, (error, user, response) => {
            if(!error) {
                console.log(user.id_str);
@@ -53,6 +59,7 @@ class TwitterStream {
                }
                else {
                    this.users.push(user.id_str);
+                   console.log('ADDED USER: ' + user.id_str);
                    return true;
                }
            }
@@ -89,12 +96,53 @@ class TwitterStream {
         });
     }
 
-    reset() {
-        if(this.isStreaming) {
-            this.client.stream.destroy();
-            this.isStreaming = false;
-            this.filter();
+    init() {
+        clearTimeout(this.timer);
+        if(this.stream == null || !this.active) {
+            console.log('INIT with keywords: ' + this.keywordsToString() + ' and users: ' + this.usersToList());
+            this.client.stream('statuses/filter', {
+                track: this.keywordsToString(),
+                follow: this.usersToList()
+            }, (stream) => {
+                clearTimeout(this.timer);
+                this.stream = stream;
+                this.active = true;
+                this.stream.on('data', this.processStream);
+                this.stream.on('end', () => {
+                    this.active = false;
+                    clearTimeout(this.timer);
+                    this.timer = setTimeout(() => {
+                        clearTimeout(this.timer);
+                        if (this.active) {
+                            this.stream.destroy();
+                        } else {
+                            console.log('RE INIT');
+                            this.init();
+                        }
+                    }, 1000 * this.calm * this.calm);
+                });
+                stream.on('error', function (error) {
+                    if (error.message == 'Status Code: 420') {
+                        this.calm++;
+                    }
+                });
+            });
         }
+    }
+
+    reset() {
+        console.log('BEGINNING RESET');
+        this.calm = 1;
+        clearTimeout(this.timer);
+        if (this.stream !== null && this.active) {
+            this.stream.destroy();
+        } else {
+            this.init();
+        }
+    }
+
+    processStream(tweet) {
+        console.log('GOT A TWEET');
     }
 }
 

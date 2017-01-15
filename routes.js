@@ -1,6 +1,6 @@
 const ldr = require('./ldr');
 
-const stream = new ldr.TwitterStream();
+const twitter = new ldr.TwitterStream();
 
 module.exports = {
     index: (req, res) => {
@@ -8,17 +8,12 @@ module.exports = {
     },
     track: (req, res) => {
         if(req.body.keyword) {
-            stream.addKeyword(req.body.keyword);
+            twitter.addKeyword(req.body.keyword);
         }
-        else if(req.body.user) {
-            stream.addUser(req.body.user);
+        if(req.body.user) {
+            twitter.addUser(req.body.user);
         }
-        if(stream.isStreaming) {
-            stream.reset()
-        }
-        else {
-            stream.filter();
-        }
+        twitter.reset();
         res.redirect('/');
     }
 };
