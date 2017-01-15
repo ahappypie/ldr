@@ -51,9 +51,8 @@ class TwitterStream {
 
     addUser(username) {
         console.log('TRYING TO ADD: ' + username);
-        this.client.get('users/show', {screen_name: username}, (error, user, response) => {
+        this.client.get('users/show', {screen_name: username}, (error, user) => {
            if(!error) {
-               console.log(user.id_str);
                if(this.users.indexOf(user.id_str) >= 0) {
                    return false;
                }
@@ -100,28 +99,31 @@ class TwitterStream {
         clearTimeout(this.timer);
         if(this.stream == null || !this.active) {
             console.log('INIT with keywords: ' + this.keywordsToString() + ' and users: ' + this.usersToList());
-            this.client.stream('statuses/filter', {
-                track: this.keywordsToString(),
-                follow: this.usersToList()
-            }, (stream) => {
+            this.client.stream('statuses/filter', {track: this.keywordsToString(), follow: this.usersToList()}, (str) => {
                 clearTimeout(this.timer);
-                this.stream = stream;
+                this.stream = str;
                 this.active = true;
+
                 this.stream.on('data', this.processStream);
+
                 this.stream.on('end', () => {
                     this.active = false;
-                    clearTimeout(this.timer);
+                    console.log('RE INITIALIZE');
+                    this.init();
+                    /*clearTimeout(this.timer);
                     this.timer = setTimeout(() => {
                         clearTimeout(this.timer);
-                        if (this.active) {
+                        if(this.active) {
                             this.stream.destroy();
-                        } else {
-                            console.log('RE INIT');
+                        }
+                        else {
+                            console.log('RE INITIALIZE');
                             this.init();
                         }
-                    }, 1000 * this.calm * this.calm);
+                    }, 1000 * this.calm * this.calm);*/
                 });
-                stream.on('error', function (error) {
+
+                this.stream.on('error', (error) => {
                     if (error.message == 'Status Code: 420') {
                         this.calm++;
                     }
@@ -135,14 +137,16 @@ class TwitterStream {
         this.calm = 1;
         clearTimeout(this.timer);
         if (this.stream !== null && this.active) {
+            console.log('DESTROYING STREAM');
             this.stream.destroy();
         } else {
+            console.log('RESET INIT');
             this.init();
         }
     }
 
     processStream(tweet) {
-        console.log('GOT A TWEET');
+        console.log(tweet.text);
     }
 }
 
