@@ -23,5 +23,3 @@ app.post('/track', routes.track);
 const server = http.createServer(app).listen(port, () => {
     console.log('Express server listening on ' + port);
 });
-
-const io = require('socket.io')(server);

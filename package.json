@@ -1,26 +1,14 @@
 {
   "name": "ldr",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Lightweight program to load tweets into a database",
   "main": "ldr.js",
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
-  },
   "author": "Brian Bagdasarian",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "hbs": "^4.0.1",
-    "react": "^15.4.2",
-    "react-dom": "^15.4.2",
-    "socket.io": "^1.7.2",
     "twitter": "^1.7.0"
-  },
-  "devDependencies": {
-    "react-scripts": "0.8.5"
   }
 }
