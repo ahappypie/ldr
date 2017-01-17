@@ -2,6 +2,8 @@
  * Created by Brian on 12/22/16.
  */
 const Twitter = require('twitter');
+const MongoDB = require('./DBManager').MongoDB;
+
 
 class TwitterStream {
     constructor() {
@@ -17,6 +19,7 @@ class TwitterStream {
         this.active = false;
         this.timer = null;
         this.calm = 1;
+        this.db = new MongoDB();
     }
 
     keywordsToString() {
@@ -102,7 +105,12 @@ class TwitterStream {
                 clearInterval(this.timer);
                 this.stream = str;
 
-                this.stream.on('data', this.processStream);
+                this.stream.on('data', (tweet) => {
+                    console.log('GOT A TWEET %s', tweet.id_str);
+                    this.db.insertTweet(tweet.id_str, tweet.created_at, tweet.text, tweet.source,
+                        tweet.user.id_str, tweet.retweeted_status.id_str);
+                    this.db.insertUser(tweet.user.id_str, tweet.user.name, tweet.user.screen_name);
+                });
 
                 this.stream.on('end', () => {
                     this.active = false;
@@ -145,10 +153,6 @@ class TwitterStream {
             console.log('RESET INIT');
             this.init();
         }
-    }
-
-    processStream(tweet) {
-        console.log(tweet.text);
     }
 }
 
