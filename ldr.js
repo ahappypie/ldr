@@ -17,6 +17,7 @@ class TwitterStream {
         this.users = [];
         this.stream = null;
         this.active = false;
+        this.stopped = false;
         this.timer = null;
         this.calm = 1;
         this.db = new MongoDB();
@@ -26,18 +27,24 @@ class TwitterStream {
         return this.keywords.join();
     }
 
-    usersToString() {
-        return this.users.join();
+    usersToString(name) {
+        return this.users.map(user => {
+            if(name) {
+                return user.name;
+            }
+            else {
+                return user.id;
+            }
+        }).join();
     }
 
     addKeyword(keyword, callback) {
-        console.log('TRYING TO ADD: ' + keyword);
         if(this.keywords.indexOf(keyword) >= 0) {
-            callback(true);
+            callback('keyword already tracked');
         }
         else {
             this.keywords.push(keyword);
-            callback(false);
+            callback(undefined);
         }
     }
 
@@ -52,19 +59,18 @@ class TwitterStream {
     }
 
     addUser(username, callback) {
-        console.log('TRYING TO ADD: ' + username);
         this.client.get('users/show', {screen_name: username}, (error, user) => {
            if(!error) {
-               if(this.users.indexOf(user.id_str) >= 0) {
-                   callback(true);
+               if(this.users.filter(u => {return u.name === username})) {
+                   callback('user already tracked');
                }
                else {
-                   this.users.push(user.id_str);
-                   callback(false);
+                   this.users.push({name: username, id: user.id_str});
+                   callback(undefined);
                }
            }
            else {
-               callback(true);
+               callback('error retrieving user id');
            }
         });
     }
@@ -79,34 +85,18 @@ class TwitterStream {
         }
     }
 
-    filter() {
-        const keywords = this.keywordsToString();
-        const users = this.usersToList();
-        this.client.stream('statuses/filter', {track: keywords, follow: users}, (stream) => {
-            console.log('Streaming %s', keywords);
-            console.log('Streaming %s', users);
-            this.isStreaming = true;
-            stream.on('data', (tweet) => {
-                console.log(tweet);
-            });
-
-            stream.on('error', (error) => {
-                console.log(error);
-            });
-        });
-    }
-
     init() {
         clearInterval(this.timer);
         if(this.stream == null || !this.active) {
-            console.log('INIT with keywords: ' + this.keywordsToString() + ' and users: ' + this.usersToString());
             this.client.stream('statuses/filter', {track: this.keywordsToString(), follow: this.usersToString()}, (str) => {
+                if(this.stopped) {
+                    this.stopped = false;
+                }
                 this.active = true;
                 clearInterval(this.timer);
                 this.stream = str;
 
                 this.stream.on('data', (tweet) => {
-                    console.log('GOT A TWEET %s', tweet.id_str);
                     this.db.insertTweet(tweet.id_str, tweet.created_at, tweet.text, tweet.source,
                         tweet.user.id_str, tweet.retweeted_status.id_str);
                     this.db.insertUser(tweet.user.id_str, tweet.user.name, tweet.user.screen_name);
@@ -115,22 +105,21 @@ class TwitterStream {
                 this.stream.on('end', () => {
                     this.active = false;
                     clearInterval(this.timer);
-                    this.timer = setInterval(() => {
-                        console.log('STREAM IS ACTIVE: ' + this.active);
-                        if(this.active) {
-                            clearInterval(this.timer);
-                            this.stream.destroy();
-                        }
-                        else {
-                            console.log('RE INITIALIZE');
-                            this.init();
-                        }
-                    }, 5000 * this.calm * this.calm);
+                    if(!this.stopped) {
+                        this.timer = setInterval(() => {
+                            if (this.active) {
+                                clearInterval(this.timer);
+                                this.stream.destroy();
+                            }
+                            else {
+                                this.init();
+                            }
+                        }, 5000 * this.calm * this.calm);
+                    }
                 });
 
                 this.stream.on('error', (error) => {
                     if (error.message == 'Status Code: 420') {
-                        console.log('INCREASING CALM');
                         this.calm++;
                     }
                 });
@@ -139,19 +128,18 @@ class TwitterStream {
     }
 
     reset() {
-        console.log('BEGINNING RESET');
         clearInterval(this.timer);
         if (this.stream !== null && this.active) {
-            console.log('DESTROYING STREAM');
             this.stream.destroy();
-            /*this.active = false;
-            setTimeout(() => {
-                console.log('REINITIALIZING');
-                this.init();
-            }, 1000);*/
         } else {
-            console.log('RESET INIT');
             this.init();
+        }
+    }
+
+    stop() {
+        if (this.stream !== null && this.active) {
+            this.stopped = true;
+            this.stream.destroy();
         }
     }
 }

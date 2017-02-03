@@ -1,14 +1,11 @@
 {
   "name": "ldr",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Lightweight program to load tweets into a database",
   "main": "ldr.js",
   "author": "Brian Bagdasarian",
   "license": "ISC",
   "dependencies": {
-    "body-parser": "^1.15.2",
-    "express": "^4.14.0",
-    "hbs": "^4.0.1",
     "mongoose": "^4.7.6",
     "twitter": "^1.7.0"
   }
